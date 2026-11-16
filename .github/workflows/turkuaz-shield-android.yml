@@ -1,0 +1,43 @@
+name: Turkuaz Shield Android APK
+on:
+  push:
+    branches: [turkuaz-shield-android]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: turkuaz-shield
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
+      - name: Copy APK with readable filename
+        run: cp app/build/outputs/apk/debug/app-debug.apk TurkuazShield-v0.1.0-debug.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TurkuazShield-debug-apk
+          path: turkuaz-shield/TurkuazShield-v0.1.0-debug.apk
+      - name: Publish prerelease APK
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete turkuaz-shield-v0.1.0 --yes || true
+          git tag -f turkuaz-shield-v0.1.0 "$GITHUB_SHA"
+          git push origin -f turkuaz-shield-v0.1.0
+          gh release create turkuaz-shield-v0.1.0 TurkuazShield-v0.1.0-debug.apk --title "Turkuaz Shield v0.1.0 (Test)" --notes "Test sürümü: antivirüs ve reklam engelleme motoru henüz bulunmuyor." --prerelease
