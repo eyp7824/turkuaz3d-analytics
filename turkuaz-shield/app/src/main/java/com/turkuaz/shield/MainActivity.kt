@@ -160,29 +160,57 @@ class MainActivity : Activity() {
         }
         back()
     }
-    private fun apps() { screen("Uygulama Güvenlik Kontrolü")
-        val packages=packageManager.getInstalledApplications(PackageManager.GET_META_DATA).sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
-        content.addView(label("Görülebilen uygulama sayısı: ${packages.size}. Kullanıcı uygulamalarına dokunarak izinlerini ve sistem bilgilerini inceleyebilirsin.",15f,cyan))
-        packages.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM)==0 }.take(100).forEach { app ->
-            val isSystem=(app.flags and ApplicationInfo.FLAG_SYSTEM)!=0
-            val pkg=try { @Suppress("DEPRECATION") packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS) } catch(e:Exception) { null }
-            val permissions=pkg?.requestedPermissions?.size ?: 0
-            val source=if(isSystem) "Sistem uygulaması" else "Kullanıcı uygulaması"
-            button(packageManager.getApplicationLabel(app).toString(), "$source • $permissions izin") {
+    private fun apps() {
+        screen("Uygulama Güvenlik Kontrolü")
+        val packages=packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM)==0 }
+            .sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
+        content.addView(label("Bulunan kullanıcı uygulamaları: ${packages.size}",17f,cyan))
+        content.addView(label("Bu inceleme uygulamaların bildirdiği izinleri gösterir. Zararlı yazılım teşhisi değildir.",14f))
+        val sensitive=setOf("CAMERA","RECORD_AUDIO","ACCESS_FINE_LOCATION","READ_CONTACTS",
+            "READ_SMS","SEND_SMS","READ_CALL_LOG","READ_PHONE_STATE","ACCESS_BACKGROUND_LOCATION")
+        var flagged=0
+        val records=packages.map { app ->
+            val pkg=try {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(app.packageName,PackageManager.GET_PERMISSIONS)
+            } catch(e:Exception) { null }
+            val names=pkg?.requestedPermissions?.toList() ?: emptyList()
+            val flags=pkg?.requestedPermissionsFlags
+            val relevant=names.filter { sensitive.contains(it.substringAfterLast(".")) }
+            if(relevant.isNotEmpty()) flagged++
+            Triple(app,Pair(names,flags),relevant)
+        }
+        content.addView(label("Hassas izin isteyen uygulamalar: $"+"{flagged}",15f,cyan))
+        records.forEach { (app,permissionData,relevant) ->
+            val (names,flags)=permissionData
+            button(packageManager.getApplicationLabel(app).toString(),
+                "$"+"{names.size} izin • $"+"{relevant.size} hassas izin isteği") {
                 screen(packageManager.getApplicationLabel(app).toString())
-                content.addView(label("Paket: ${app.packageName}",14f,cyan))
-                val names=pkg?.requestedPermissions?.toList() ?: emptyList()
-                content.addView(label(if(names.isEmpty()) "Bildirilen izin bulunamadı." else names.joinToString("\\n") { it.substringAfterLast(".") },14f))
-                button("Android uygulama bilgilerini aç") {
+                content.addView(label("Paket: $"+"{app.packageName}",13f,cyan))
+                if(relevant.isNotEmpty()) {
+                    content.addView(label("Hassas izin istekleri: $"+"{relevant.joinToString(", ") { it.substringAfterLast(".") }}",14f,cyan))
+                }
+                if(names.isEmpty()) content.addView(label("Bildirilen izin yok.",14f))
+                names.forEachIndexed { index,name ->
+                    val granted=flags?.getOrNull(index)?.let {
+                        (it and PackageInfo.REQUESTED_PERMISSION_GRANTED)!=0
+                    } ?: false
+                    content.addView(label("$"+"{if(granted) "✓ Verilmiş" else "— İstenmiş"} • $"+"{name.substringAfterLast(".")}",13f))
+                }
+                button("Uygulamanın izin ayarlarını aç") {
                     try {
                         startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            android.net.Uri.parse("package:${app.packageName}")))
-                    } catch(e:Exception) { Toast.makeText(this,"Ayarlar açılamadı",Toast.LENGTH_SHORT).show() }
+                            android.net.Uri.parse("package:$"+"{app.packageName}")))
+                    } catch(e:Exception) {
+                        Toast.makeText(this,"Uygulama ayarları açılamadı",Toast.LENGTH_SHORT).show()
+                    }
                 }
                 back()
             }
         }
-        content.addView(label("İzin sayısı tek başına risk göstergesi değildir. Bu liste antivirüs taraması değildir; zararlı yazılım teşhisi yapılmadı.",15f)); back() }
+        back()
+    }
     private fun chooseCleanup() {
         val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
