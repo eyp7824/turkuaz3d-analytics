@@ -101,7 +101,7 @@ class MainActivity : Activity() {
                     }
                 }
                 val hash=digest.digest().joinToString("") { "%02x".format(it) }
-                "Dosya boyutu: $count bayt\nSHA-256: $hash\n\nBu işlem yalnızca dosyanın parmak izini hesaplar; virüs tespiti yapmaz."
+                "Dosya boyutu: $count bayt\\nSHA-256: $hash\\n\\nBu işlem yalnızca dosyanın parmak izini hesaplar; virüs tespiti yapmaz."
             } catch(e:Exception) { "Dosya incelenemedi: ${e.message}" }
             runOnUiThread {
                 screen("APK Dosyası İnceleme")
