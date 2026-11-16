@@ -14,12 +14,17 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.*
 import java.util.Locale
+import java.security.MessageDigest
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : Activity() {
     private val bg = Color.rgb(3, 16, 31)
     private val panel = Color.rgb(9, 38, 64)
     private val cyan = Color.rgb(34, 224, 239)
     private lateinit var content: LinearLayout
+    private val pickApk = 2101
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); home() }
     private fun shape(color:Int): GradientDrawable = GradientDrawable().apply { setColor(color); cornerRadius=24f; setStroke(2, cyan) }
     private fun label(s:String, size:Float=18f, color:Int=Color.WHITE):TextView = TextView(this).apply { text=s; textSize=size; setTextColor(color); gravity=Gravity.CENTER; setPadding(10,16,10,16) }
@@ -51,6 +56,7 @@ class MainActivity : Activity() {
         button("🧹  Güvenli Temizlik","Depolama incelemesi") { storage() }
         button("🔄  Güncelleme Artıkları","Güvenli inceleme ve sınırlar") { leftovers() }
         button("🛡  Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
+        button("🔍  APK Dosyası İncele","SHA-256 parmak izi hesapla") { chooseApk() }
         button("🚫  Reklam Kalkanı","Koruma seçenekleri") { ads() }
         button("⚡  Şarj Kontrolü","Gerçek pil durumu") { charge() }
         button("ℹ  Hakkında","Sürüm 0.1.0") { about() }
@@ -66,6 +72,44 @@ class MainActivity : Activity() {
         content.addView(label("Görülebilen uygulama sayısı: ${packages.size}",16f,cyan))
         packages.take(150).forEach { app -> content.addView(label("${packageManager.getApplicationLabel(app)}\n${app.packageName}",13f)) }
         content.addView(label("Bu liste antivirüs taraması değildir. Zararlı yazılım teşhisi yapılmadı.",15f)); back() }
+    private fun chooseApk() {
+        val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type="*/*"
+        }
+        startActivityForResult(intent,pickApk)
+    }
+    @Deprecated("Legacy document picker callback")
+    override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
+        super.onActivityResult(requestCode,resultCode,data)
+        if(requestCode!=pickApk || resultCode!=RESULT_OK) return
+        val uri=data?.data ?: return
+        screen("APK Dosyası İnceleme")
+        content.addView(label("Dosya okunuyor ve SHA-256 hesaplanıyor...",17f))
+        Thread {
+            val result=try {
+                val digest=MessageDigest.getInstance("SHA-256")
+                var count=0L
+                contentResolver.openInputStream(uri).use { input ->
+                    requireNotNull(input) { "Dosya açılamadı" }
+                    val buffer=ByteArray(32768)
+                    while(true) {
+                        val n=input.read(buffer)
+                        if(n<0) break
+                        digest.update(buffer,0,n)
+                        count+=n
+                    }
+                }
+                val hash=digest.digest().joinToString("") { "%02x".format(it) }
+                "Dosya boyutu: $count bayt\\nSHA-256: $hash\\n\\nBu işlem yalnızca dosyanın parmak izini hesaplar; virüs tespiti yapmaz."
+            } catch(e:Exception) { "Dosya incelenemedi: ${e.message}" }
+            runOnUiThread {
+                screen("APK Dosyası İnceleme")
+                content.addView(label(result,15f))
+                back()
+            }
+        }.start()
+    }
     private fun ads() { screen("Reklam Kalkanı"); content.addView(label("Reklam engelleme motoru henüz etkin değil. Sistem reklamlarını kapatma ve özel DNS ayarlarını açabilirsiniz.",16f))
         button("Özel DNS ayarlarını aç") { try { startActivity(Intent("android.settings.PRIVATE_DNS_SETTINGS")) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) } }; back() }
     private fun charge() { screen("Şarj Kontrolü"); val b=registerReceiver(null,IntentFilter(Intent.ACTION_BATTERY_CHANGED))
