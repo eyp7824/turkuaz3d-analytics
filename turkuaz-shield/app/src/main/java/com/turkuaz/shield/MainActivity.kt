@@ -59,6 +59,7 @@ class MainActivity : Activity() {
         button("🛡  Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
         button("🔍  APK Dosyası İncele","SHA-256 parmak izi hesapla") { chooseApk() }
         button("🚫  Reklam Kalkanı","Koruma seçenekleri") { ads() }
+        button("🔐  Güvenlik Ayarları","Cihaz güvenlik seçenekleri") { securitySettings() }
         button("⚡  Şarj Kontrolü","Gerçek pil durumu") { charge() }
         button("ℹ  Hakkında","Sürüm 0.1.0") { about() }
     }
@@ -145,6 +146,19 @@ class MainActivity : Activity() {
     }
     private fun ads() { screen("Reklam Kalkanı"); content.addView(label("Reklam engelleme motoru henüz etkin değil. Sistem reklamlarını kapatma ve özel DNS ayarlarını açabilirsiniz.",16f))
         button("Özel DNS ayarlarını aç") { try { startActivity(Intent("android.settings.PRIVATE_DNS_SETTINGS")) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) } }; back() }
+    private fun securitySettings() {
+        screen("Güvenlik Ayarları")
+        content.addView(label("Android sisteminin sunduğu güvenlik seçenekleri. Bu uygulama sistem ayarlarını izinsiz değiştirmez.",16f))
+        button("Uygulama güvenliği ayarları") {
+            try { startActivity(Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS)) }
+            catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+        }
+        button("Uygulama izinlerini yönet") {
+            try { startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_SETTINGS)) }
+            catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+        }
+        back()
+    }
     private fun charge() { screen("Şarj Kontrolü"); val b=registerReceiver(null,IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val temp=b?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,-1) ?: -1
         val status=b?.getIntExtra(BatteryManager.EXTRA_STATUS,-1) ?: -1
