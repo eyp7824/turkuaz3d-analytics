@@ -140,7 +140,32 @@ class MainActivity : Activity() {
         val temp=b?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,-1) ?: -1
         val status=b?.getIntExtra(BatteryManager.EXTRA_STATUS,-1) ?: -1
         content.addView(label("Pil sıcaklığı: ${if(temp>=0) "${temp/10.0} °C" else "Bilinmiyor"}",22f,cyan))
-        content.addView(label("Şarj durumu: ${if(status==BatteryManager.BATTERY_STATUS_CHARGING) "Şarj oluyor" else "Şarj olmuyor / dolu"}",18f))
+        content.addView(label("Şarj durumu: ${when(status) {
+            BatteryManager.BATTERY_STATUS_CHARGING -> "Şarj oluyor"
+            BatteryManager.BATTERY_STATUS_FULL -> "Tam dolu"
+            BatteryManager.BATTERY_STATUS_DISCHARGING -> "Pil kullanılıyor"
+            BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Şarj olmuyor"
+            else -> "Bilinmiyor"
+        }}",18f))
+        val health=b?.getIntExtra(BatteryManager.EXTRA_HEALTH,-1) ?: -1
+        val healthText=when(health) {
+            BatteryManager.BATTERY_HEALTH_GOOD -> "İyi"
+            BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Aşırı sıcak"
+            BatteryManager.BATTERY_HEALTH_DEAD -> "Arızalı"
+            BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Aşırı voltaj"
+            BatteryManager.BATTERY_HEALTH_COLD -> "Çok soğuk"
+            BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Belirtilmeyen hata"
+            else -> "Bilinmiyor"
+        }
+        content.addView(label("Sistemin bildirdiği pil durumu: $healthText",17f))
+        val plugged=b?.getIntExtra(BatteryManager.EXTRA_PLUGGED,0) ?: 0
+        val source=when(plugged) {
+            BatteryManager.BATTERY_PLUGGED_AC -> "Priz adaptörü"
+            BatteryManager.BATTERY_PLUGGED_USB -> "USB"
+            BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Kablosuz"
+            else -> "Bağlı değil / bilinmiyor"
+        }
+        content.addView(label("Güç kaynağı: $source",17f))
         content.addView(label("Standart / Hızlı / Turbo şarj modları sistem izni olmadan değiştirilemez. Bu sürüm donanım modunu değiştirmez.",16f)); back() }
     private fun about() { screen("Turkuaz Shield 0.1.0"); content.addView(label("İlk kaynak kodu prototipi. Henüz antivirüs, VPN reklam filtreleme veya otomatik temizlik motoru içermez.",16f)); back() }
     @Deprecated("System back navigation") override fun onBackPressed() { home() }
