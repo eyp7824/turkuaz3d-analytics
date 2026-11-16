@@ -23,6 +23,9 @@ import android.content.pm.PackageInfo
 import android.os.Build
 import android.app.AlertDialog
 import android.provider.DocumentsContract
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
 
 class MainActivity : Activity() {
     private val bg = Color.rgb(3, 16, 31)
@@ -81,8 +84,29 @@ class MainActivity : Activity() {
         content.addView(box,lp)
         box.setOnClickListener { onClick() }
     }
+    private fun shieldMark(): View = object : View(this) {
+        private val pen=Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onMeasure(w:Int,h:Int) { setMeasuredDimension(MeasureSpec.getSize(w),dp(104)) }
+        override fun onDraw(c:Canvas) {
+            super.onDraw(c)
+            val x=width/2f; val y=dp(7).toFloat()
+            val p=Path().apply {
+                moveTo(x,y); lineTo(x+dp(42),y+dp(15))
+                lineTo(x+dp(36),y+dp(62)); quadTo(x+dp(26),y+dp(78),x,y+dp(91))
+                quadTo(x-dp(26),y+dp(78),x-dp(36),y+dp(62))
+                lineTo(x-dp(42),y+dp(15)); close()
+            }
+            pen.style=Paint.Style.FILL; pen.color=panel; c.drawPath(p,pen)
+            pen.style=Paint.Style.STROKE; pen.strokeWidth=dp(3).toFloat()
+            pen.color=cyan; c.drawPath(p,pen)
+            pen.style=Paint.Style.FILL; pen.typeface=Typeface.DEFAULT_BOLD
+            pen.textAlign=Paint.Align.CENTER; pen.textSize=dp(42).toFloat()
+            c.drawText("T",x,y+dp(62),pen)
+        }
+    }
     private fun home() {
-        screen("⬡  Turkuaz Shield")
+        screen("TURKUAZ SHIELD")
+        content.addView(shieldMark())
         content.addView(label("Akıllı Telefon Koruması",13f,cyan).apply { gravity=Gravity.CENTER; setPadding(0,0,0,dp(4)) })
         val battery=registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level=battery?.getIntExtra(BatteryManager.EXTRA_LEVEL,-1) ?: -1
@@ -91,14 +115,14 @@ class MainActivity : Activity() {
         val stat=StatFs(Environment.getDataDirectory().path)
         val total=stat.totalBytes/1073741824.0; val free=stat.availableBytes/1073741824.0
         content.addView(label("Pil  ${if(percent>=0) "$percent%" else "—"}     •     Depolama  ${String.format(Locale.US,"%.1f",total-free)} / ${String.format(Locale.US,"%.1f",total)} GB",14f).apply { gravity=Gravity.CENTER; setPadding(dp(2),dp(8),dp(2),dp(12)) })
-        button("🧹  Güvenli Temizlik","Depolama incelemesi") { storage() }
-        button("🔄  Güncelleme Artıkları","Güncelleme dosyası incelemesi") { leftovers() }
-        button("🛡  Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
-        button("🔍  APK Dosyası İncele","SHA-256 parmak izi hesapla") { chooseApk() }
-        button("🚫  Reklam Kalkanı","Koruma seçenekleri") { ads() }
-        button("🔐  Güvenlik Ayarları","Cihaz güvenlik seçenekleri") { securitySettings() }
-        button("⚡  Şarj Kontrolü","Gerçek pil durumu") { charge() }
-        button("ℹ  Hakkında","Sürüm 0.1.0") { about() }
+        button("Güvenli Temizlik","Depolama incelemesi") { storage() }
+        button("Güncelleme Artıkları","Güncelleme dosyası incelemesi") { leftovers() }
+        button("Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
+        button("APK Dosyası İncele","SHA-256 parmak izi hesapla") { chooseApk() }
+        button("Reklam Kalkanı","Koruma seçenekleri") { ads() }
+        button("Güvenlik Ayarları","Cihaz güvenlik seçenekleri") { securitySettings() }
+        button("Şarj Kontrolü","Gerçek pil durumu") { charge() }
+        button("Hakkında","Sürüm 0.1.0") { about() }
     }
     private fun back() { button("← Ana Ekran") { home() } }
     private fun storage() { screen("Güvenli Temizlik"); val st=StatFs(Environment.getDataDirectory().path)
