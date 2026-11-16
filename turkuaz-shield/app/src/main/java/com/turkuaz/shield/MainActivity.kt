@@ -26,6 +26,7 @@ import android.provider.DocumentsContract
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RectF
 
 class MainActivity : Activity() {
     private val bg = Color.rgb(3, 16, 31)
@@ -104,9 +105,28 @@ class MainActivity : Activity() {
             c.drawText("T",x,y+dp(62),pen)
         }
     }
+    private fun dashboardRing(): View = object : View(this) {
+        private val p=Paint(Paint.ANTI_ALIAS_FLAG)
+        override fun onMeasure(w:Int,h:Int) { setMeasuredDimension(MeasureSpec.getSize(w),dp(180)) }
+        override fun onDraw(c:Canvas) {
+            super.onDraw(c)
+            val x=width/2f; val y=dp(88).toFloat(); val radius=dp(69).toFloat()
+            p.style=Paint.Style.STROKE; p.strokeWidth=dp(12).toFloat()
+            p.strokeCap=Paint.Cap.ROUND; p.color=Color.rgb(20,70,93)
+            c.drawCircle(x,y,radius,p)
+            p.color=cyan
+            c.drawArc(RectF(x-radius,y-radius,x+radius,y+radius),-90f,275f,false,p)
+            p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
+            p.typeface=Typeface.DEFAULT_BOLD; p.textSize=dp(29).toFloat()
+            c.drawText("TARAMA",x,y-dp(2),p)
+            p.color=Color.WHITE; p.textSize=dp(12).toFloat()
+            c.drawText("Başlatmak için dokun",x,y+dp(22),p)
+        }
+    }.apply { setOnClickListener { apps() }; isClickable=true; contentDescription="Güvenlik kontrolünü aç" }
     private fun home() {
         screen("TURKUAZ SHIELD")
         content.addView(shieldMark())
+        content.addView(dashboardRing())
         content.addView(label("Akıllı Telefon Koruması",13f,cyan).apply { gravity=Gravity.CENTER; setPadding(0,0,0,dp(4)) })
         val battery=registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level=battery?.getIntExtra(BatteryManager.EXTRA_LEVEL,-1) ?: -1
