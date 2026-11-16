@@ -15,9 +15,6 @@ import android.view.Gravity
 import android.widget.*
 import java.util.Locale
 import java.security.MessageDigest
-import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 
 class MainActivity : Activity() {
     private val bg = Color.rgb(3, 16, 31)
@@ -25,6 +22,7 @@ class MainActivity : Activity() {
     private val cyan = Color.rgb(34, 224, 239)
     private lateinit var content: LinearLayout
     private val pickApk = 2101
+    private val pickCleanup = 2102
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); home() }
     private fun shape(color:Int): GradientDrawable = GradientDrawable().apply { setColor(color); cornerRadius=24f; setStroke(2, cyan) }
     private fun label(s:String, size:Float=18f, color:Int=Color.WHITE):TextView = TextView(this).apply { text=s; textSize=size; setTextColor(color); gravity=Gravity.CENTER; setPadding(10,16,10,16) }
@@ -65,6 +63,7 @@ class MainActivity : Activity() {
     private fun storage() { screen("Güvenli Temizlik"); val st=StatFs(Environment.getDataDirectory().path)
         content.addView(label("Kullanılabilir alan: ${String.format(Locale.US,"%.2f",st.availableBytes/1073741824.0)} GB"))
         content.addView(label("Bu sürüm otomatik dosya silmez. Dosyalarınız ve hesap oturumlarınız korunur.",16f))
+        button("İndirilen dosyaları incele") { chooseCleanup() }
         button("Sistem depolama ayarlarını aç") { startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) }; back() }
     private fun leftovers() { screen("Güncelleme Artıkları"); content.addView(label("Android diğer uygulamaların korumalı güncelleme dosyalarını göstermeyebilir. Bu sürüm dosya silmez ve sahte tarama sonucu üretmez.",17f)); back() }
     private fun apps() { screen("Uygulama Güvenlik Kontrolü")
@@ -72,6 +71,13 @@ class MainActivity : Activity() {
         content.addView(label("Görülebilen uygulama sayısı: ${packages.size}",16f,cyan))
         packages.take(150).forEach { app -> content.addView(label("${packageManager.getApplicationLabel(app)}\n${app.packageName}",13f)) }
         content.addView(label("Bu liste antivirüs taraması değildir. Zararlı yazılım teşhisi yapılmadı.",15f)); back() }
+    private fun chooseCleanup() {
+        val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type="*/*"
+        }
+        startActivityForResult(intent,pickCleanup)
+    }
     private fun chooseApk() {
         val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -82,8 +88,26 @@ class MainActivity : Activity() {
     @Deprecated("Legacy document picker callback")
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
         super.onActivityResult(requestCode,resultCode,data)
-        if(requestCode!=pickApk || resultCode!=RESULT_OK) return
+        if((requestCode!=pickApk && requestCode!=pickCleanup) || resultCode!=RESULT_OK) return
         val uri=data?.data ?: return
+        if(requestCode==pickCleanup) {
+            screen("Dosya İncelemesi")
+            val name=android.provider.OpenableColumns.DISPLAY_NAME
+            val size=android.provider.OpenableColumns.SIZE
+            val info=try {
+                contentResolver.query(uri,arrayOf(name,size),null,null,null)?.use { cursor ->
+                    if(cursor.moveToFirst()) {
+                        val fileName=cursor.getString(0) ?: "Bilinmiyor"
+                        val fileSize=if(cursor.isNull(1)) "Bilinmiyor" else "${cursor.getLong(1)} bayt"
+                        "Dosya: $fileName\\nBoyut: $fileSize"
+                    } else "Dosya bilgisi bulunamadı"
+                } ?: "Dosya bilgisi bulunamadı"
+            } catch(e:Exception) { "Dosya bilgisi okunamadı" }
+            content.addView(label(info,17f))
+            content.addView(label("Bu sürümde otomatik silme yoktur. Silme işlemi yapılmadı.",16f,cyan))
+            back()
+            return
+        }
         screen("APK Dosyası İnceleme")
         content.addView(label("Dosya okunuyor ve SHA-256 hesaplanıyor...",17f))
         Thread {
