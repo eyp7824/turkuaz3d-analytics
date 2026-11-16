@@ -12,6 +12,9 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.util.TypedValue
 import android.widget.*
 import java.util.Locale
 import java.security.MessageDigest
@@ -27,33 +30,65 @@ class MainActivity : Activity() {
     private val pickApk = 2101
     private val pickCleanup = 2102
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); home() }
-    private fun shape(color:Int): GradientDrawable = GradientDrawable().apply { setColor(color); cornerRadius=24f; setStroke(2, cyan) }
-    private fun label(s:String, size:Float=18f, color:Int=Color.WHITE):TextView = TextView(this).apply { text=s; textSize=size; setTextColor(color); gravity=Gravity.CENTER; setPadding(10,16,10,16) }
+    private fun dp(v:Int):Int=(v*resources.displayMetrics.density+0.5f).toInt()
+    private fun shape(color:Int): GradientDrawable = GradientDrawable().apply {
+        setColor(color); cornerRadius=dp(15).toFloat(); setStroke(dp(1),cyan)
+    }
+    private fun label(s:String,size:Float=16f,color:Int=Color.WHITE):TextView=TextView(this).apply {
+        text=s; textSize=size; setTextColor(color); gravity=Gravity.CENTER_VERTICAL
+        setPadding(dp(12),dp(8),dp(12),dp(8))
+    }
     private fun screen(title:String) {
-        val sc=ScrollView(this).apply { setBackgroundColor(bg) }
-        content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(22,28,22,30) }
-        sc.addView(content); setContentView(sc)
-        val heading=label(title,27f,cyan).apply { setTypeface(null,Typeface.BOLD) }
+        window.statusBarColor=bg
+        window.navigationBarColor=bg
+        window.decorView.systemUiVisibility=0
+        val sc=ScrollView(this).apply {
+            setBackgroundColor(bg); isFillViewport=true; clipToPadding=false
+        }
+        content=LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(dp(16),dp(8),dp(16),dp(28))
+        }
+        sc.addView(content)
+        setContentView(sc)
+        val heading=label(title,23f,cyan).apply {
+            setTypeface(null,Typeface.BOLD); gravity=Gravity.CENTER
+            setPadding(dp(4),dp(8),dp(4),dp(8))
+        }
         content.addView(heading)
     }
-    private fun button(title:String, detail:String="", onClick:()->Unit) {
-        val t=label(if(detail.isEmpty()) title else "$title\n$detail",18f)
-        t.background=shape(panel)
-        val lp=LinearLayout.LayoutParams(-1,-2).apply { setMargins(0,10,0,10) }
-        content.addView(t,lp); t.setOnClickListener { onClick() }
+    private fun button(title:String,detail:String="",onClick:()->Unit) {
+        val box=LinearLayout(this).apply {
+            orientation=LinearLayout.VERTICAL
+            background=shape(panel)
+            setPadding(dp(14),dp(9),dp(14),dp(9))
+            isClickable=true; isFocusable=true
+        }
+        val heading=label(title,17f).apply {
+            setTypeface(null,Typeface.BOLD)
+            gravity=Gravity.CENTER_VERTICAL
+            setPadding(0,0,0,0)
+            maxLines=1
+            ellipsize=android.text.TextUtils.TruncateAt.END
+        }
+        box.addView(heading)
+        if(detail.isNotEmpty()) box.addView(label(detail,12f,Color.rgb(171,204,217)).apply {
+            setPadding(0,dp(2),0,0); maxLines=2
+        })
+        val lp=LinearLayout.LayoutParams(-1,-2).apply { setMargins(0,dp(5),0,dp(5)) }
+        content.addView(box,lp)
+        box.setOnClickListener { onClick() }
     }
     private fun home() {
         screen("⬡  Turkuaz Shield")
-        content.addView(label("Akıllı Telefon Koruması",16f,cyan))
-        content.addView(label("◈",94f,cyan))
-        content.addView(label("Cihaz Bilgileri",22f))
+        content.addView(label("Akıllı Telefon Koruması",13f,cyan).apply { gravity=Gravity.CENTER; setPadding(0,0,0,dp(4)) })
         val battery=registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level=battery?.getIntExtra(BatteryManager.EXTRA_LEVEL,-1) ?: -1
         val scale=battery?.getIntExtra(BatteryManager.EXTRA_SCALE,100) ?: 100
         val percent=if(level>=0 && scale>0) level*100/scale else -1
         val stat=StatFs(Environment.getDataDirectory().path)
         val total=stat.totalBytes/1073741824.0; val free=stat.availableBytes/1073741824.0
-        content.addView(label("Pil: ${if(percent>=0) "$percent%" else "Bilinmiyor"}  •  Depolama: ${String.format(Locale.US,"%.1f",total-free)} / ${String.format(Locale.US,"%.1f",total)} GB",16f))
+        content.addView(label("Pil  ${if(percent>=0) "$percent%" else "—"}     •     Depolama  ${String.format(Locale.US,"%.1f",total-free)} / ${String.format(Locale.US,"%.1f",total)} GB",14f).apply { gravity=Gravity.CENTER; setPadding(dp(2),dp(8),dp(2),dp(12)) })
         button("🧹  Güvenli Temizlik","Depolama incelemesi") { storage() }
         button("🔄  Güncelleme Artıkları","Güvenli inceleme ve sınırlar") { leftovers() }
         button("🛡  Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
