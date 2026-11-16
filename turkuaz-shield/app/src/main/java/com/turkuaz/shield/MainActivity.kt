@@ -280,7 +280,24 @@ class MainActivity : Activity() {
                     }
                 }
                 val hash=digest.digest().joinToString("") { "%02x".format(it) }
-                "Dosya boyutu: $count bayt\nSHA-256: $hash\n\nBu işlem yalnızca dosyanın parmak izini hesaplar; virüs tespiti yapmaz."
+                val details=try {
+                    val temp=java.io.File.createTempFile("shield_",".apk",cacheDir)
+                    try {
+                        contentResolver.openInputStream(uri).use { stream ->
+                            requireNotNull(stream) { "Dosya okunamadı" }
+                            temp.outputStream().use { stream.copyTo(it) }
+                        }
+                        @Suppress("DEPRECATION")
+                        val info=packageManager.getPackageArchiveInfo(temp.absolutePath,PackageManager.GET_PERMISSIONS)
+                        if(info==null) "\nGeçerli APK paketi tanınmadı."
+                        else {
+                            val perms=info.requestedPermissions?.toList() ?: emptyList()
+                            "\nPaket: ${info.packageName}\nİstenen izinler (${perms.size}):\n" +
+                                perms.joinToString("\n") { it.substringAfterLast(".") }
+                        }
+                    } finally { temp.delete() }
+                } catch(e:Exception) { "\nAPK izinleri okunamadı: ${e.message}" }
+                "Dosya boyutu: $count bayt\nSHA-256: $hash\n$details\n\nBu analiz virüs tespiti yapmaz."
             } catch(e:Exception) { "Dosya incelenemedi: ${e.message}" }
             runOnUiThread {
                 screen("APK Dosyası İnceleme")
