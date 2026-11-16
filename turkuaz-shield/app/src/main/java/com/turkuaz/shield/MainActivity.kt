@@ -21,6 +21,8 @@ import java.security.MessageDigest
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Build
+import android.app.AlertDialog
+import android.provider.DocumentsContract
 
 class MainActivity : Activity() {
     private val bg = Color.rgb(3, 16, 31)
@@ -158,7 +160,22 @@ class MainActivity : Activity() {
                 } ?: "Dosya bilgisi bulunamadı"
             } catch(e:Exception) { "Dosya bilgisi okunamadı" }
             content.addView(label(info,17f))
-            content.addView(label("Bu sürümde otomatik silme yoktur. Silme işlemi yapılmadı.",16f,cyan))
+            content.addView(label("Yalnızca seçtiğin dosyayı silebilirsin. Uygulama başka dosyalara veya hesaplarına dokunmaz.",15f,cyan))
+            button("Seçilen dosyayı sil") {
+                AlertDialog.Builder(this)
+                    .setTitle("Dosyayı sil?")
+                    .setMessage("Seçtiğin dosya kalıcı olarak silinebilir. Bu işlem geri alınamayabilir. Devam edilsin mi?")
+                    .setNegativeButton("Vazgeç",null)
+                    .setPositiveButton("Sil") { _,_ ->
+                        val result=try {
+                            if(DocumentsContract.isDocumentUri(this,uri) && DocumentsContract.deleteDocument(contentResolver,uri)) "Seçilen dosya silindi."
+                            else "Dosya sağlayıcısı silmeye izin vermedi."
+                        } catch(e:Exception) { "Silme başarısız: ${e.message ?: "Erişim engellendi"}" }
+                        screen("Temizlik Sonucu")
+                        content.addView(label(result,17f,cyan))
+                        back()
+                    }.show()
+            }
             back()
             return
         }
