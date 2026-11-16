@@ -385,8 +385,30 @@ class MainActivity : Activity() {
             }
         }.start()
     }
-    private fun ads() { screen("Reklam Kalkanı"); content.addView(label("Özel DNS ayarlarından DNS tabanlı reklam filtrelemesi yapılandırılabilir. Bu sürümde uygulama içi VPN filtresi yoktur.",16f))
-        button("Özel DNS ayarlarını aç") { try { startActivity(Intent("android.settings.PRIVATE_DNS_SETTINGS")) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) } }; back() }
+    private fun ads() {
+        screen("Reklam Kalkanı")
+        val mode=try {
+            android.provider.Settings.Global.getString(contentResolver,"private_dns_mode")
+        } catch(e:Exception) { null }
+        val hostname=try {
+            android.provider.Settings.Global.getString(contentResolver,"private_dns_specifier")
+        } catch(e:Exception) { null }
+        val status=when(mode) {
+            "hostname" -> "Özel DNS etkin: ${hostname ?: "Sunucu bilinmiyor"}"
+            "opportunistic" -> "Otomatik DNS modu"
+            "off" -> "Özel DNS kapalı"
+            else -> "Özel DNS durumu okunamadı"
+        }
+        content.addView(label(status,18f,cyan))
+        content.addView(label("DNS tabanlı filtreleme için Android Özel DNS ayarından bir filtreleme hizmeti seçebilirsin. DNS filtreleme her reklamı engellemez.",15f))
+        button("Özel DNS ayarlarını aç","DNS hizmetini Android ayarlarında yönet") {
+            try { startActivity(Intent("android.settings.PRIVATE_DNS_SETTINGS")) }
+            catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) }
+        }
+        button("Durumu yenile") { ads() }
+        content.addView(label("Bu uygulama şu anda VPN veya kendi reklam filtreleme motorunu çalıştırmaz.",13f))
+        back()
+    }
     private fun securitySettings() {
         screen("Güvenlik Ayarları")
         content.addView(label("Android sisteminin sunduğu güvenlik seçenekleri. Bu uygulama sistem ayarlarını izinsiz değiştirmez.",16f))
