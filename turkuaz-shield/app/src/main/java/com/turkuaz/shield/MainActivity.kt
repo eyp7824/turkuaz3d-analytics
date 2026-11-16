@@ -35,6 +35,7 @@ class MainActivity : Activity() {
     private lateinit var content: LinearLayout
     private val pickApk = 2101
     private val pickCleanup = 2102
+    private val pickFolder = 2103
     override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); home() }
     private fun dp(v:Int):Int=(v*resources.displayMetrics.density+0.5f).toInt()
     private fun shape(color:Int): GradientDrawable = GradientDrawable().apply {
@@ -227,7 +228,8 @@ class MainActivity : Activity() {
     private fun storage() { screen("Güvenli Temizlik"); val st=StatFs(Environment.getDataDirectory().path)
         content.addView(label("Kullanılabilir alan: ${String.format(Locale.US,"%.2f",st.availableBytes/1073741824.0)} GB"))
         content.addView(label("Bu sürüm otomatik dosya silmez. Dosyalarınız ve hesap oturumlarınız korunur.",16f))
-        button("İndirilen dosyaları incele") { chooseCleanup() }
+        button("Klasörde büyük dosyaları bul","Seçtiğin klasördeki dosyaları boyutlarına göre sırala") { chooseFolder() }
+        button("Tek dosya incele ve sil") { chooseCleanup() }
         button("Sistem depolama ayarlarını aç") { try { startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) } }; back() }
     private fun leftovers() {
         screen("Güncelleme Artıkları")
@@ -290,6 +292,68 @@ class MainActivity : Activity() {
         }
         back()
     }
+    private fun chooseFolder() {
+        try {
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE),pickFolder)
+        } catch(e:Exception) {
+            Toast.makeText(this,"Klasör seçici açılamadı",Toast.LENGTH_LONG).show()
+        }
+    }
+    private fun inspectFolder(tree:android.net.Uri) {
+        screen("Klasör İncelemesi")
+        content.addView(label("Klasördeki dosyalar okunuyor...",16f,cyan))
+        Thread {
+            val results=mutableListOf<Triple<String,Long,android.net.Uri>>()
+            var error:String?=null
+            try {
+                val treeId=DocumentsContract.getTreeDocumentId(tree)
+                val children=DocumentsContract.buildChildDocumentsUriUsingTree(tree,treeId)
+                val columns=arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_SIZE,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE
+                )
+                contentResolver.query(children,columns,null,null,null)?.use { cursor ->
+                    while(cursor.moveToNext()) {
+                        val mime=cursor.getString(3) ?: ""
+                        if(mime==DocumentsContract.Document.MIME_TYPE_DIR) continue
+                        val id=cursor.getString(0) ?: continue
+                        val name=cursor.getString(1) ?: "Adsız dosya"
+                        val size=if(cursor.isNull(2)) -1L else cursor.getLong(2)
+                        val doc=DocumentsContract.buildDocumentUriUsingTree(tree,id)
+                        results.add(Triple(name,size,doc))
+                    }
+                } ?: run { error="Bu klasörün içeriği okunamadı." }
+            } catch(e:Exception) { error=e.message ?: "Klasöre erişim engellendi." }
+            results.sortByDescending { it.second }
+            runOnUiThread {
+                if(isFinishing || isDestroyed) return@runOnUiThread
+                screen("Klasör İncelemesi")
+                if(error!=null) content.addView(label(error ?: "",16f))
+                else {
+                    content.addView(label("Bulunan dosya: ${results.size}. En büyük dosyalar üstte. Alt klasörler taranmaz.",15f,cyan))
+                    results.take(100).forEach { (name,size,uri) ->
+                        val mb=if(size>=0) String.format(Locale.US,"%.2f MB",size/1048576.0) else "Boyut bilinmiyor"
+                        button(name,mb) {
+                            AlertDialog.Builder(this)
+                                .setTitle("Dosyayı sil?")
+                                .setMessage("$name\n$mb\nBu dosya kalıcı olarak silinebilir. İşlem geri alınamayabilir.")
+                                .setNegativeButton("Vazgeç",null)
+                                .setPositiveButton("Sil") { _,_ ->
+                                    val ok=try { DocumentsContract.deleteDocument(contentResolver,uri) }
+                                        catch(e:Exception) { false }
+                                    Toast.makeText(this,if(ok) "Dosya silindi" else "Dosya silinemedi",Toast.LENGTH_LONG).show()
+                                    inspectFolder(tree)
+                                }.show()
+                        }
+                    }
+                }
+                button("Başka klasör seç") { chooseFolder() }
+                back()
+            }
+        }.start()
+    }
     private fun chooseCleanup() {
         val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -307,8 +371,9 @@ class MainActivity : Activity() {
     @Deprecated("Legacy document picker callback")
     override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
         super.onActivityResult(requestCode,resultCode,data)
-        if((requestCode!=pickApk && requestCode!=pickCleanup) || resultCode!=RESULT_OK) return
+        if((requestCode!=pickApk && requestCode!=pickCleanup && requestCode!=pickFolder) || resultCode!=RESULT_OK) return
         val uri=data?.data ?: return
+        if(requestCode==pickFolder) { inspectFolder(uri); return }
         if(requestCode==pickCleanup) {
             screen("Dosya İncelemesi")
             val name=android.provider.OpenableColumns.DISPLAY_NAME
