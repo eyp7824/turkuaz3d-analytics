@@ -90,7 +90,7 @@ class MainActivity : Activity() {
         val total=stat.totalBytes/1073741824.0; val free=stat.availableBytes/1073741824.0
         content.addView(label("Pil  ${if(percent>=0) "$percent%" else "—"}     •     Depolama  ${String.format(Locale.US,"%.1f",total-free)} / ${String.format(Locale.US,"%.1f",total)} GB",14f).apply { gravity=Gravity.CENTER; setPadding(dp(2),dp(8),dp(2),dp(12)) })
         button("🧹  Güvenli Temizlik","Depolama incelemesi") { storage() }
-        button("🔄  Güncelleme Artıkları","Güvenli inceleme ve sınırlar") { leftovers() }
+        button("🔄  Güncelleme Artıkları","Güncelleme dosyası incelemesi") { leftovers() }
         button("🛡  Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
         button("🔍  APK Dosyası İncele","SHA-256 parmak izi hesapla") { chooseApk() }
         button("🚫  Reklam Kalkanı","Koruma seçenekleri") { ads() }
@@ -104,7 +104,16 @@ class MainActivity : Activity() {
         content.addView(label("Bu sürüm otomatik dosya silmez. Dosyalarınız ve hesap oturumlarınız korunur.",16f))
         button("İndirilen dosyaları incele") { chooseCleanup() }
         button("Sistem depolama ayarlarını aç") { startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) }; back() }
-    private fun leftovers() { screen("Güncelleme Artıkları"); content.addView(label("Android diğer uygulamaların korumalı güncelleme dosyalarını göstermeyebilir. Bu sürüm dosya silmez ve sahte tarama sonucu üretmez.",17f)); back() }
+    private fun leftovers() {
+        screen("Güncelleme Artıkları")
+        content.addView(label("İndirilen güncelleme paketlerini seçip boyutlarını inceleyebilirsin. Sistem korumalı güncelleme alanlarına erişim yoktur.",16f))
+        button("Güncelleme paketini seç") { chooseCleanup() }
+        button("Sistem depolama ayarları") {
+            try { startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) }
+            catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) }
+        }
+        back()
+    }
     private fun apps() { screen("Uygulama Güvenlik Kontrolü")
         val packages=packageManager.getInstalledApplications(PackageManager.GET_META_DATA).sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
         content.addView(label("Görülebilen uygulama sayısı: ${packages.size}",16f,cyan))
@@ -179,7 +188,7 @@ class MainActivity : Activity() {
             }
         }.start()
     }
-    private fun ads() { screen("Reklam Kalkanı"); content.addView(label("Reklam engelleme motoru henüz etkin değil. Sistem reklamlarını kapatma ve özel DNS ayarlarını açabilirsiniz.",16f))
+    private fun ads() { screen("Reklam Kalkanı"); content.addView(label("Özel DNS ayarlarından DNS tabanlı reklam filtrelemesi yapılandırılabilir. Bu sürümde uygulama içi VPN filtresi yoktur.",16f))
         button("Özel DNS ayarlarını aç") { try { startActivity(Intent("android.settings.PRIVATE_DNS_SETTINGS")) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)) } }; back() }
     private fun securitySettings() {
         screen("Güvenlik Ayarları")
@@ -224,7 +233,7 @@ class MainActivity : Activity() {
             else -> "Bağlı değil / bilinmiyor"
         }
         content.addView(label("Güç kaynağı: $source",17f))
-        content.addView(label("Standart / Hızlı / Turbo şarj modları sistem izni olmadan değiştirilemez. Bu sürüm donanım modunu değiştirmez.",16f)); back() }
+        content.addView(label("Standart / Hızlı / Turbo şarj modları sistem izni olmadan değiştirilemez. Bu sürüm donanım modunu değiştirmez.",16f)); button("Pil ayarlarını aç") { try { startActivity(Intent(android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS)) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) } }; back() }
     private fun about() { screen("Turkuaz Shield 0.1.0"); content.addView(label("İlk kaynak kodu prototipi. Henüz antivirüs, VPN reklam filtreleme veya otomatik temizlik motoru içermez.",16f)); back() }
     @Deprecated("System back navigation") override fun onBackPressed() { home() }
 }
