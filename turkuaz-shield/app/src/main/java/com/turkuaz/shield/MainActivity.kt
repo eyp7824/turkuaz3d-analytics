@@ -103,7 +103,7 @@ class MainActivity : Activity() {
         content.addView(label("Kullanılabilir alan: ${String.format(Locale.US,"%.2f",st.availableBytes/1073741824.0)} GB"))
         content.addView(label("Bu sürüm otomatik dosya silmez. Dosyalarınız ve hesap oturumlarınız korunur.",16f))
         button("İndirilen dosyaları incele") { chooseCleanup() }
-        button("Sistem depolama ayarlarını aç") { startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) }; back() }
+        button("Sistem depolama ayarlarını aç") { try { startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) } catch(e:Exception) { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) } }; back() }
     private fun leftovers() {
         screen("Güncelleme Artıkları")
         content.addView(label("İndirilen güncelleme paketlerini seçip boyutlarını inceleyebilirsin. Sistem korumalı güncelleme alanlarına erişim yoktur.",16f))
@@ -116,13 +116,13 @@ class MainActivity : Activity() {
     }
     private fun apps() { screen("Uygulama Güvenlik Kontrolü")
         val packages=packageManager.getInstalledApplications(PackageManager.GET_META_DATA).sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
-        content.addView(label("Görülebilen uygulama sayısı: ${packages.size}",16f,cyan))
-        packages.take(150).forEach { app ->
+        content.addView(label("Görülebilen uygulama sayısı: ${packages.size}. Aşağıda ilk 100 kullanıcı uygulaması listelenir.",15f,cyan))
+        packages.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM)==0 }.take(100).forEach { app ->
             val isSystem=(app.flags and ApplicationInfo.FLAG_SYSTEM)!=0
             val pkg=try { @Suppress("DEPRECATION") packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS) } catch(e:Exception) { null }
             val permissions=pkg?.requestedPermissions?.size ?: 0
             val source=if(isSystem) "Sistem uygulaması" else "Kullanıcı uygulaması"
-            content.addView(label("${packageManager.getApplicationLabel(app)}\\n${app.packageName}\\n$source • İstenen izin: $permissions",13f))
+            content.addView(label("${packageManager.getApplicationLabel(app)}\n${app.packageName}\n$source • İstenen izin: $permissions",13f))
         }
         content.addView(label("İzin sayısı tek başına risk göstergesi değildir. Bu liste antivirüs taraması değildir; zararlı yazılım teşhisi yapılmadı.",15f)); back() }
     private fun chooseCleanup() {
@@ -153,7 +153,7 @@ class MainActivity : Activity() {
                     if(cursor.moveToFirst()) {
                         val fileName=cursor.getString(0) ?: "Bilinmiyor"
                         val fileSize=if(cursor.isNull(1)) "Bilinmiyor" else "${cursor.getLong(1)} bayt"
-                        "Dosya: $fileName\\nBoyut: $fileSize"
+                        "Dosya: $fileName\nBoyut: $fileSize"
                     } else "Dosya bilgisi bulunamadı"
                 } ?: "Dosya bilgisi bulunamadı"
             } catch(e:Exception) { "Dosya bilgisi okunamadı" }
@@ -179,7 +179,7 @@ class MainActivity : Activity() {
                     }
                 }
                 val hash=digest.digest().joinToString("") { "%02x".format(it) }
-                "Dosya boyutu: $count bayt\\nSHA-256: $hash\\n\\nBu işlem yalnızca dosyanın parmak izini hesaplar; virüs tespiti yapmaz."
+                "Dosya boyutu: $count bayt\nSHA-256: $hash\n\nBu işlem yalnızca dosyanın parmak izini hesaplar; virüs tespiti yapmaz."
             } catch(e:Exception) { "Dosya incelenemedi: ${e.message}" }
             runOnUiThread {
                 screen("APK Dosyası İnceleme")
