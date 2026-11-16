@@ -15,6 +15,9 @@ import android.view.Gravity
 import android.widget.*
 import java.util.Locale
 import java.security.MessageDigest
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.os.Build
 
 class MainActivity : Activity() {
     private val bg = Color.rgb(3, 16, 31)
@@ -69,8 +72,14 @@ class MainActivity : Activity() {
     private fun apps() { screen("Uygulama Güvenlik Kontrolü")
         val packages=packageManager.getInstalledApplications(PackageManager.GET_META_DATA).sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
         content.addView(label("Görülebilen uygulama sayısı: ${packages.size}",16f,cyan))
-        packages.take(150).forEach { app -> content.addView(label("${packageManager.getApplicationLabel(app)}\n${app.packageName}",13f)) }
-        content.addView(label("Bu liste antivirüs taraması değildir. Zararlı yazılım teşhisi yapılmadı.",15f)); back() }
+        packages.take(150).forEach { app ->
+            val isSystem=(app.flags and ApplicationInfo.FLAG_SYSTEM)!=0
+            val pkg=try { @Suppress("DEPRECATION") packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS) } catch(e:Exception) { null }
+            val permissions=pkg?.requestedPermissions?.size ?: 0
+            val source=if(isSystem) "Sistem uygulaması" else "Kullanıcı uygulaması"
+            content.addView(label("${packageManager.getApplicationLabel(app)}\\n${app.packageName}\\n$source • İstenen izin: $permissions",13f))
+        }
+        content.addView(label("İzin sayısı tek başına risk göstergesi değildir. Bu liste antivirüs taraması değildir; zararlı yazılım teşhisi yapılmadı.",15f)); back() }
     private fun chooseCleanup() {
         val intent=Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
