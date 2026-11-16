@@ -142,13 +142,25 @@ class MainActivity : Activity() {
     }
     private fun apps() { screen("Uygulama Güvenlik Kontrolü")
         val packages=packageManager.getInstalledApplications(PackageManager.GET_META_DATA).sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
-        content.addView(label("Görülebilen uygulama sayısı: ${packages.size}. Aşağıda ilk 100 kullanıcı uygulaması listelenir.",15f,cyan))
+        content.addView(label("Görülebilen uygulama sayısı: ${packages.size}. Kullanıcı uygulamalarına dokunarak izinlerini ve sistem bilgilerini inceleyebilirsin.",15f,cyan))
         packages.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM)==0 }.take(100).forEach { app ->
             val isSystem=(app.flags and ApplicationInfo.FLAG_SYSTEM)!=0
             val pkg=try { @Suppress("DEPRECATION") packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS) } catch(e:Exception) { null }
             val permissions=pkg?.requestedPermissions?.size ?: 0
             val source=if(isSystem) "Sistem uygulaması" else "Kullanıcı uygulaması"
-            content.addView(label("${packageManager.getApplicationLabel(app)}\n${app.packageName}\n$source • İstenen izin: $permissions",13f))
+            button(packageManager.getApplicationLabel(app).toString(), "$source • $permissions izin") {
+                screen(packageManager.getApplicationLabel(app).toString())
+                content.addView(label("Paket: ${app.packageName}",14f,cyan))
+                val names=pkg?.requestedPermissions?.toList() ?: emptyList()
+                content.addView(label(if(names.isEmpty()) "Bildirilen izin bulunamadı." else names.joinToString("\\n") { it.substringAfterLast(".") },14f))
+                button("Android uygulama bilgilerini aç") {
+                    try {
+                        startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:${app.packageName}")))
+                    } catch(e:Exception) { Toast.makeText(this,"Ayarlar açılamadı",Toast.LENGTH_SHORT).show() }
+                }
+                back()
+            }
         }
         content.addView(label("İzin sayısı tek başına risk göstergesi değildir. Bu liste antivirüs taraması değildir; zararlı yazılım teşhisi yapılmadı.",15f)); back() }
     private fun chooseCleanup() {
