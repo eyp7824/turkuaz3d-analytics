@@ -125,24 +125,103 @@ class MainActivity : Activity() {
     }.apply { setOnClickListener { apps() }; isClickable=true; contentDescription="Güvenlik kontrolünü aç" }
     private fun home() {
         screen("TURKUAZ SHIELD")
+        content.addView(label("AKILLI TELEFON KORUMASI",12f,cyan).apply {
+            gravity=Gravity.CENTER
+            letterSpacing=0.15f
+        })
         content.addView(shieldMark())
         content.addView(dashboardRing())
-        content.addView(label("Akıllı Telefon Koruması",13f,cyan).apply { gravity=Gravity.CENTER; setPadding(0,0,0,dp(4)) })
         val battery=registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level=battery?.getIntExtra(BatteryManager.EXTRA_LEVEL,-1) ?: -1
         val scale=battery?.getIntExtra(BatteryManager.EXTRA_SCALE,100) ?: 100
         val percent=if(level>=0 && scale>0) level*100/scale else -1
         val stat=StatFs(Environment.getDataDirectory().path)
-        val total=stat.totalBytes/1073741824.0; val free=stat.availableBytes/1073741824.0
-        content.addView(label("Pil  ${if(percent>=0) "$percent%" else "—"}     •     Depolama  ${String.format(Locale.US,"%.1f",total-free)} / ${String.format(Locale.US,"%.1f",total)} GB",14f).apply { gravity=Gravity.CENTER; setPadding(dp(2),dp(8),dp(2),dp(12)) })
-        button("Güvenli Temizlik","Depolama incelemesi") { storage() }
-        button("Güncelleme Artıkları","Güncelleme dosyası incelemesi") { leftovers() }
-        button("Güvenlik Kontrolü","Yüklü uygulamalar ve izinler") { apps() }
-        button("APK Dosyası İncele","SHA-256 parmak izi hesapla") { chooseApk() }
-        button("Reklam Kalkanı","Koruma seçenekleri") { ads() }
-        button("Güvenlik Ayarları","Cihaz güvenlik seçenekleri") { securitySettings() }
-        button("Şarj Kontrolü","Gerçek pil durumu") { charge() }
-        button("Hakkında","Sürüm 0.1.0") { about() }
+        val total=stat.totalBytes/1073741824.0
+        val free=stat.availableBytes/1073741824.0
+        val status=LinearLayout(this).apply {
+            orientation=LinearLayout.HORIZONTAL
+            background=shape(panel)
+            setPadding(dp(6),dp(10),dp(6),dp(10))
+        }
+        val batteryText=label("⚡ PİL\n${if(percent>=0) "$percent%" else "—"}",17f,cyan).apply {
+            gravity=Gravity.CENTER; setTypeface(null,Typeface.BOLD)
+        }
+        val storageText=label("◉ DEPOLAMA\n${String.format(Locale.US,"%.1f",total-free)} / ${String.format(Locale.US,"%.1f",total)} GB",15f,Color.WHITE).apply {
+            gravity=Gravity.CENTER
+        }
+        status.addView(batteryText,LinearLayout.LayoutParams(0,-2,1f))
+        status.addView(storageText,LinearLayout.LayoutParams(0,-2,1.3f))
+        content.addView(status,LinearLayout.LayoutParams(-1,-2).apply {
+            setMargins(0,dp(8),0,dp(14))
+        })
+        content.addView(label("KORUMA ARAÇLARI",15f,cyan).apply {
+            setTypeface(null,Typeface.BOLD)
+        })
+        val items=listOf(
+            Triple("✦","Güvenlik\nKontrolü",0),
+            Triple("▣","APK\nİncele",1),
+            Triple("✧","Güvenli\nTemizlik",2),
+            Triple("◈","Reklam\nKalkanı",3),
+            Triple("⚡","Şarj\nKontrolü",4),
+            Triple("◷","Güncelleme\nArtıkları",5),
+            Triple("⚙","Güvenlik\nAyarları",6),
+            Triple("ⓘ","Hakkında",7)
+        )
+        val accents=intArrayOf(
+            Color.rgb(34,224,239),Color.rgb(117,174,255),
+            Color.rgb(54,223,164),Color.rgb(255,185,83),
+            Color.rgb(255,207,83),Color.rgb(179,148,255),
+            Color.rgb(121,207,240),Color.rgb(183,201,215)
+        )
+        items.chunked(2).forEach { pair ->
+            val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+            pair.forEach { (symbol,name,index) ->
+                val tile=LinearLayout(this).apply {
+                    orientation=LinearLayout.VERTICAL
+                    gravity=Gravity.CENTER
+                    background=GradientDrawable(
+                        GradientDrawable.Orientation.TL_BR,
+                        intArrayOf(Color.rgb(16,53,81),Color.rgb(7,28,49))
+                    ).apply {
+                        cornerRadius=dp(18).toFloat()
+                        setStroke(dp(1),Color.rgb(32,91,114))
+                    }
+                    setPadding(dp(6),dp(15),dp(6),dp(15))
+                    isClickable=true
+                    isFocusable=true
+                    contentDescription=name.replace("\n"," ")
+                }
+                tile.addView(label(symbol,31f,accents[index]).apply {
+                    gravity=Gravity.CENTER
+                    setTypeface(null,Typeface.BOLD)
+                })
+                tile.addView(label(name,14f,Color.WHITE).apply {
+                    gravity=Gravity.CENTER
+                    textAlignment=View.TEXT_ALIGNMENT_CENTER
+                    setTypeface(null,Typeface.BOLD)
+                    minHeight=dp(48)
+                })
+                tile.setOnClickListener {
+                    when(index) {
+                        0 -> apps()
+                        1 -> chooseApk()
+                        2 -> storage()
+                        3 -> ads()
+                        4 -> charge()
+                        5 -> leftovers()
+                        6 -> securitySettings()
+                        else -> about()
+                    }
+                }
+                row.addView(tile,LinearLayout.LayoutParams(0,dp(132),1f).apply {
+                    setMargins(dp(4),dp(4),dp(4),dp(4))
+                })
+            }
+            content.addView(row)
+        }
+        content.addView(label("İzin incelemesi antivirüs taraması değildir.",12f,Color.rgb(158,182,197)).apply {
+            gravity=Gravity.CENTER
+        })
     }
     private fun back() { button("← Ana Ekran") { home() } }
     private fun storage() { screen("Güvenli Temizlik"); val st=StatFs(Environment.getDataDirectory().path)
