@@ -111,76 +111,18 @@ class MainActivity : Activity() {
         override fun onDraw(c:Canvas) {
             super.onDraw(c)
             val x=width/2f; val y=dp(88).toFloat(); val radius=dp(69).toFloat()
-            val enabled=getPreferences(MODE_PRIVATE).getBoolean("audit_enabled",false)
             p.style=Paint.Style.STROKE; p.strokeWidth=dp(12).toFloat()
             p.strokeCap=Paint.Cap.ROUND; p.color=Color.rgb(20,70,93)
             c.drawCircle(x,y,radius,p)
-            p.color=if(enabled) cyan else Color.rgb(123,147,163)
-            c.drawArc(RectF(x-radius,y-radius,x+radius,y+radius),-90f,if(enabled) 330f else 90f,false,p)
+            p.color=cyan
+            c.drawArc(RectF(x-radius,y-radius,x+radius,y+radius),-90f,275f,false,p)
             p.style=Paint.Style.FILL; p.textAlign=Paint.Align.CENTER
-            p.typeface=Typeface.DEFAULT_BOLD; p.textSize=dp(27).toFloat()
-            c.drawText(if(enabled) "AÇIK" else "KAPALI",x,y-dp(2),p)
+            p.typeface=Typeface.DEFAULT_BOLD; p.textSize=dp(25).toFloat()
+            c.drawText("TURKUAZ",x,y-dp(2),p)
             p.color=Color.WHITE; p.textSize=dp(12).toFloat()
-            c.drawText("Güvenlik denetimi",x,y+dp(22),p)
+            c.drawText("SHIELD",x,y+dp(22),p)
         }
-    }.apply {
-        setOnClickListener { toggleAudit() }
-        isClickable=true
-        contentDescription="Güvenlik denetimini aç veya kapat"
-    }
-    private fun toggleAudit() {
-        val prefs=getPreferences(MODE_PRIVATE)
-        val enabled=!prefs.getBoolean("audit_enabled",false)
-        prefs.edit().putBoolean("audit_enabled",enabled).apply()
-        if(enabled) runAudit() else home()
-    }
-    private fun runAudit() {
-        screen("Güvenlik Denetimi")
-        content.addView(label("Yüklü uygulamaların hassas izinleri kontrol ediliyor...",17f,cyan))
-        Thread {
-            val result=try {
-                val sensitive=setOf("CAMERA","RECORD_AUDIO","ACCESS_FINE_LOCATION","READ_CONTACTS",
-                    "READ_SMS","SEND_SMS","READ_CALL_LOG","ACCESS_BACKGROUND_LOCATION")
-                val apps=packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                    .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM)==0 }
-                var withSensitive=0
-                var grantedCount=0
-                apps.forEach { app ->
-                    val info=try {
-                        @Suppress("DEPRECATION")
-                        packageManager.getPackageInfo(app.packageName,PackageManager.GET_PERMISSIONS)
-                    } catch(e:Exception) { null }
-                    val names=info?.requestedPermissions ?: emptyArray<String>()
-                    val flags=info?.requestedPermissionsFlags
-                    var found=false
-                    names.forEachIndexed { index,name ->
-                        if(name.substringAfterLast(".") in sensitive) {
-                            found=true
-                            if(flags?.getOrNull(index)?.let {
-                                (it and PackageInfo.REQUESTED_PERMISSION_GRANTED)!=0
-                            } == true) grantedCount++
-                        }
-                    }
-                    if(found) withSensitive++
-                }
-                "İncelenen uygulama: ${apps.size}\nHassas izin isteyen uygulama: $withSensitive\nVerilmiş hassas izin: $grantedCount"
-            } catch(e:Exception) { "Denetim tamamlanamadı: ${e.message}" }
-            runOnUiThread {
-                if(!isFinishing && !isDestroyed) {
-                    getPreferences(MODE_PRIVATE).edit()
-                        .putString("last_audit",result)
-                        .putLong("last_audit_time",System.currentTimeMillis()).apply()
-                    screen("Denetim Sonucu")
-                    content.addView(label(result,19f,cyan))
-                    content.addView(label("Bu denetim uygulama izinlerini kontrol eder. Antivirüs veya sürekli arka plan koruması değildir.",14f))
-                    button("Uygulamaları tek tek incele") { apps() }
-                    button("Denetimi yeniden çalıştır") { runAudit() }
-                    button("Denetimi kapat") { toggleAudit() }
-                    back()
-                }
-            }
-        }.start()
-    }
+    }.apply { contentDescription="Turkuaz Shield logosu" }
     private fun home() {
         screen("TURKUAZ SHIELD")
         content.addView(label("AKILLI TELEFON KORUMASI",12f,cyan).apply {
@@ -189,19 +131,6 @@ class MainActivity : Activity() {
         })
         content.addView(shieldMark())
         content.addView(dashboardRing())
-        val auditPrefs=getPreferences(MODE_PRIVATE)
-        val enabled=auditPrefs.getBoolean("audit_enabled",false)
-        content.addView(label(if(enabled) "DENETİM AÇIK • Yeniden taramak için dokun" else "DENETİM KAPALI • Başlatmak için dokun",14f,cyan).apply {
-            gravity=Gravity.CENTER
-            setOnClickListener { if(enabled) runAudit() else toggleAudit() }
-        })
-        if(enabled) {
-            val previous=auditPrefs.getString("last_audit","Henüz denetim yapılmadı.") ?: ""
-            content.addView(label(previous,13f,Color.rgb(171,204,217)).apply {
-                gravity=Gravity.CENTER
-            })
-        }
-
         val battery=registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level=battery?.getIntExtra(BatteryManager.EXTRA_LEVEL,-1) ?: -1
         val scale=battery?.getIntExtra(BatteryManager.EXTRA_SCALE,100) ?: 100
@@ -442,8 +371,16 @@ class MainActivity : Activity() {
                         if(info==null) "\nGeçerli APK paketi tanınmadı."
                         else {
                             val perms=info.requestedPermissions?.toList() ?: emptyList()
+                            val sensitive=setOf("READ_SMS","SEND_SMS","READ_CONTACTS",
+                                "RECORD_AUDIO","CAMERA","ACCESS_FINE_LOCATION",
+                                "ACCESS_BACKGROUND_LOCATION","READ_CALL_LOG")
+                            val flagged=perms.filter { it.substringAfterLast(".") in sensitive }
+                            val warning=if(flagged.isEmpty()) "\nBelirlenen hassas izin isteği yok."
+                                else "\nDikkat gerektiren izinler: " +
+                                    flagged.joinToString(", ") { it.substringAfterLast(".") }
+
                             "\nPaket: ${info.packageName}\nİstenen izinler (${perms.size}):\n" +
-                                perms.joinToString("\n") { it.substringAfterLast(".") }
+                                perms.joinToString("\n") { it.substringAfterLast(".") } + warning
                         }
                     } finally { temp.delete() }
                 } catch(e:Exception) { "\nAPK izinleri okunamadı: ${e.message}" }
