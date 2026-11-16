@@ -181,27 +181,27 @@ class MainActivity : Activity() {
             if(relevant.isNotEmpty()) flagged++
             Triple(app,Pair(names,flags),relevant)
         }
-        content.addView(label("Hassas izin isteyen uygulamalar: $"+"{flagged}",15f,cyan))
+        content.addView(label("Hassas izin isteyen uygulamalar: ${flagged}",15f,cyan))
         records.forEach { (app,permissionData,relevant) ->
             val (names,flags)=permissionData
             button(packageManager.getApplicationLabel(app).toString(),
-                "$"+"{names.size} izin • $"+"{relevant.size} hassas izin isteği") {
+                "${names.size} izin • ${relevant.size} hassas izin isteği") {
                 screen(packageManager.getApplicationLabel(app).toString())
-                content.addView(label("Paket: $"+"{app.packageName}",13f,cyan))
+                content.addView(label("Paket: ${app.packageName}",13f,cyan))
                 if(relevant.isNotEmpty()) {
-                    content.addView(label("Hassas izin istekleri: $"+"{relevant.joinToString(", ") { it.substringAfterLast(".") }}",14f,cyan))
+                    content.addView(label("Hassas izin istekleri: ${relevant.joinToString(", ") { it.substringAfterLast(".") }}",14f,cyan))
                 }
                 if(names.isEmpty()) content.addView(label("Bildirilen izin yok.",14f))
                 names.forEachIndexed { index,name ->
                     val granted=flags?.getOrNull(index)?.let {
                         (it and PackageInfo.REQUESTED_PERMISSION_GRANTED)!=0
                     } ?: false
-                    content.addView(label("$"+"{if(granted) "✓ Verilmiş" else "— İstenmiş"} • $"+"{name.substringAfterLast(".")}",13f))
+                    content.addView(label("${if(granted) "✓ Verilmiş" else "— İstenmiş"} • ${name.substringAfterLast(".")}",13f))
                 }
                 button("Uygulamanın izin ayarlarını aç") {
                     try {
                         startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            android.net.Uri.parse("package:$"+"{app.packageName}")))
+                            android.net.Uri.parse("package:${app.packageName}")))
                     } catch(e:Exception) {
                         Toast.makeText(this,"Uygulama ayarları açılamadı",Toast.LENGTH_SHORT).show()
                     }
