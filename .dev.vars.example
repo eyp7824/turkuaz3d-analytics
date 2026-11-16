@@ -1,0 +1,2 @@
+# Cloudflare: create a NEW secret (minimum 32 random characters). Do not use a published sample value.
+ADMIN_KEY=

@@ -1,0 +1,15 @@
+name = "turkuaz3d-analytics"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# After creating your database, replace the placeholder with the D1 database id.
+[[d1_databases]]
+binding = "DB"
+database_name = "turkuaz3d-analytics"
+database_id = "95e7072a-4ced-49fe-94ab-b97660d3159e"
+migrations_dir = "migrations"
+
+# Automatic 90-day analytics retention
+[triggers]
+crons = ["0 2 * * *"]
